@@ -1,10 +1,11 @@
 {
-  "name": "@malys/node-red-contrib-flow-splitter-extended",
-  "version": "1.4.0",
+  "name": "@malysus/node-red-contrib-flow-splitter-extended",
+  "version": "1.4.1",
   "description": "Split your flows.json file in individual YAML or JSON files (per tab, subflow and config-node) with optional function and ui-template node code extraction.",
   "main": "index.js",
   "scripts": {
-    "test": "node --test test/roundtrip.test.js"
+    "test": "node --test test/roundtrip.test.js",
+    "prepublishOnly": "npm test"
   },
   "files": [
     "index.js",

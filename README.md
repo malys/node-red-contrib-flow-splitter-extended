@@ -159,8 +159,10 @@ You can freely edit the config file, the changes are taken into account at the n
 - `fastJsonSplit`: **default `true`.** Uses an in-memory JSON splitter that avoids rebuilding a full `FlowSet` and rereading every generated file. Set to `false` to use the legacy `flows-file-manager` path.
 ## Installation
 
+Run the following command in your Node-RED user directory - typically `~/.node-red`:
+
 ```bash
-npm install @malys/node-red-contrib-flow-splitter-extended
+npm install @malysus/node-red-contrib-flow-splitter-extended
 ```
 
 Migrating from `@yroshcha/node-red-contrib-flow-splitter-extended`: uninstall it first (both register the same plugin and endpoint). `.config.flow-splitter.json` and `src/` are kept as they are.
