@@ -160,7 +160,13 @@ You can freely edit the config file, the changes are taken into account at the n
 ## Installation
 
 ```bash
-npm install @yroshcha/node-red-contrib-flow-splitter-extended
+npm install @malys/node-red-contrib-flow-splitter-extended
+```
+
+Migrating from `@yroshcha/node-red-contrib-flow-splitter-extended`: uninstall it first (both register the same plugin and endpoint). `.config.flow-splitter.json` and `src/` are kept as they are.
+
+```bash
+npm uninstall @yroshcha/node-red-contrib-flow-splitter-extended
 ```
 
 Or install via the Node-RED palette manager.
@@ -294,7 +300,7 @@ The "rebuild from `src/`" path only runs when Node-RED boots with no flow file p
 
 ## Credits
 
-Maintained by [YRoshcha](https://github.com/YRoshcha).
+Maintained by [Malys](https://github.com/malys), fork of [YRoshcha/node-red-contrib-flow-splitter-extended](https://github.com/YRoshcha/node-red-contrib-flow-splitter-extended).
 
 This extended version combines the flow-splitting functionality from the original [node-red-contrib-flow-splitter](https://github.com/vgo-exo/node-red-contrib-flow-splitter) with function/template extraction inspired by [functions-templates-manager](https://github.com/daniel-payne/functions-templates-manager). It was originally packaged as `node-red-contrib-flow-splitter-extended` by vdwpsmt.
 
