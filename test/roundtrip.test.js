@@ -118,3 +118,21 @@ test('falls back to the artifact when src/ is corrupted', async () => {
     assert.deepStrictEqual(byId(await env.boot()), byId(flows))
     assert.match(env.log.warn.join('\n'), /restored flows from artifact backup/)
 })
+
+for (const fileFormat of ['json', 'yaml']) test(`${fileFormat}: duplicate global-config nodes are folded into one split file`, async () => {
+    const env = setup({ fileFormat })
+    const gc = (id, entries) => ({ id, type: 'global-config', env: entries, modules: {} })
+    await env.deploy(flows.concat([
+        gc('g1', [{ name: 'folders', value: 'new', type: 'json' }]),
+        gc('g2', [{ name: 'folders', value: 'old', type: 'json' }, { name: 'TZ', value: 'Europe/Paris', type: 'str' }])
+    ]))
+    const files = fs.readdirSync(path.join(env.src, 'config-nodes')).filter(f => f.startsWith('global-config'))
+    assert.strictEqual(files.length, 1)
+    const content = fs.readFileSync(path.join(env.src, 'config-nodes', files[0]), 'utf8')
+    assert.match(content, /g1/)
+    assert.doesNotMatch(content, /"g2"|"old"/)
+    assert.match(content, /Europe\/Paris/)
+    assert.ok(env.log.warn.some(m => /2 global-config nodes/.test(m)))
+    const rebuilt = await env.boot()
+    assert.strictEqual(rebuilt.filter(n => n.type === 'global-config').length, 1)
+})

@@ -618,6 +618,37 @@ async function manualReload(req, res) {
 }
 
 /**
+ * Node-RED keeps ONE global-config node (global env vars, palette modules),
+ * but nothing stops an editor plugin from adding a second one: the folders
+ * plugin creates its own when it saves before the flows are loaded. Every
+ * copy then lands in config-nodes/, comes back on the next rebuild and the
+ * pile grows with each editor session. Keep the first one and fold the
+ * others into it: for an env name present twice the first value wins, which
+ * is also the copy the folders plugin reads.
+ * @param {Array} flowNodes - Array of all flow nodes from Node-RED
+ * @returns {Array} flowNodes with at most one global-config node
+ */
+function mergeGlobalConfigs(flowNodes) {
+    const configs = flowNodes.filter(node => node.type === 'global-config')
+    if (configs.length < 2) return flowNodes
+    const [first, ...others] = configs
+    const env = [...(first.env || [])]
+    const modules = { ...(first.modules || {}) }
+    for (const other of others) {
+        for (const item of other.env || []) {
+            if (!env.some(e => e.name === item.name)) env.push(item)
+        }
+        for (const [name, version] of Object.entries(other.modules || {})) {
+            if (!(name in modules)) modules[name] = version
+        }
+    }
+    RED.log.warn(`[node-red-contrib-flow-splitter-extended] ${configs.length} global-config nodes found, kept ${first.id} in the split files. Remove the extra ones from the editor (${others.map(n => n.id).join(', ')}).`)
+    const merged = { ...first, env, modules }
+    const dropped = new Set(others.map(n => n.id))
+    return flowNodes.filter(node => !dropped.has(node.id)).map(node => node === first ? merged : node)
+}
+
+/**
  * Main function executed on each flow restart
  * @param {FlowStartedEventType} flowEventData
  * @returns {void}
@@ -686,21 +717,22 @@ async function onFlowReload(flowEventData) {
     }
 
     // Flows exist - split into source files
+    const flows = mergeGlobalConfigs(flowEventData.config.flows)
 
     let updatedCfg
     if (cfg.fileFormat === 'json' && cfg.fastJsonSplit !== false) {
-        updatedCfg = fastJsonTree(flowEventData.config.flows, cfg, projectPath)
+        updatedCfg = fastJsonTree(flows, cfg, projectPath)
     } else {
         let flowSet
         // Guarantee a label/name to avoid a crash inside flows-file-manager's
         // disambiguate() (see ensureFlowIdentifiers doc above)
         try {
-            flowSet = manager.constructFlowSetFromMonolithObject(ensureFlowIdentifiers(flowEventData.config.flows))
+            flowSet = manager.constructFlowSetFromMonolithObject(ensureFlowIdentifiers(flows))
         } catch (error) {
             RED.log.error(`[node-red-contrib-flow-splitter-extended] Failed to build FlowSet from monolith object (flows-file-manager error): ${error.message}`)
             return
         }
-        cleanFlowSet(flowSet, flowEventData.config.flows)
+        cleanFlowSet(flowSet, flows)
         updatedCfg = constructTreeFilesIncrementally(flowSet, cfg, projectPath)
     }
     writeSplitterConfig(updatedCfg, projectPath)
@@ -712,10 +744,10 @@ async function onFlowReload(flowEventData) {
     // cheaper than JSON.stringify-ing the complete flow again.
     writeMonolithArtifact(updatedCfg, projectPath)
 
-    const extractionFingerprint = getExtractionFingerprint(flowEventData.config.flows)
+    const extractionFingerprint = getExtractionFingerprint(flows)
     if (extractionFingerprint !== lastExtractionFingerprint) {
         if (cfg.fileFormat === 'json' && cfg.fastJsonSplit !== false) {
-            extractFunctionsTemplatesFromRawFlow(updatedCfg, projectPath, flowEventData.config.flows)
+            extractFunctionsTemplatesFromRawFlow(updatedCfg, projectPath, flows)
         } else {
             extractFunctionsTemplatesFromSplitFiles(updatedCfg, projectPath)
         }
